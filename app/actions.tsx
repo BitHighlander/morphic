@@ -60,18 +60,24 @@ async function submit(
     process.env.OLLAMA_MODEL && process.env.OLLAMA_BASE_URL
   )
   const maxMessages = useSpecificAPI ? 5 : useOllamaProvider ? 1 : 10
+
   // Limit the number of messages to the maximum
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
+  console.log('messages:', messages)
+
   // Get the user input from the form data
   const userInput = skip
     ? `{"action": "skip"}`
     : (formData?.get('input') as string)
+  console.log('userInput:', userInput)
 
   const content = skip
     ? userInput
     : formData
     ? JSON.stringify(Object.fromEntries(formData))
     : null
+  console.log('content:', content)
+
   const type = skip
     ? undefined
     : formData?.has('input')
@@ -79,6 +85,7 @@ async function submit(
     : formData?.has('related_query')
     ? 'input_related'
     : 'inquiry'
+  console.log('type:', type)
 
   // Add the user message to the state
   if (content) {
@@ -102,10 +109,13 @@ async function submit(
 
   async function processEvents() {
     let action = { object: { next: 'proceed' } }
+    console.log('1. action:', action)
     // If the user skips the task, we proceed to the search
     if (!skip) action = (await taskManager(messages)) ?? action
+    console.log('2. action:', action)
 
     if (action.object.next === 'inquire') {
+      console.log('chose inquire')
       // Generate inquiry
       const inquiry = await inquire(uiStream, messages)
       uiStream.done()
@@ -142,6 +152,9 @@ async function submit(
         ? toolOutputs.length === 0 && answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
+      //
+
+
       // Search the web and generate the answer
       const { fullResponse, hasError, toolResponses } = await researcher(
         uiStream,
@@ -149,6 +162,10 @@ async function submit(
         messages,
         useSpecificAPI
       )
+      console.log('fullResponse:', fullResponse)
+      console.log('hasError:', hasError)
+      console.log('toolResponses:', toolResponses)
+
       answer = fullResponse
       toolOutputs = toolResponses
       errorOccurred = hasError
@@ -297,7 +314,9 @@ export const AI = createAI<AIState, UIState>({
 
     const aiState = getAIState()
     if (aiState) {
+      console.log('aiState:', aiState)
       const uiState = getUIStateFromAIState(aiState as Chat)
+      console.log('uiState:', uiState)
       return uiState
     } else {
       return
